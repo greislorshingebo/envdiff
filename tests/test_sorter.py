@@ -68,3 +68,9 @@ def test_sort_does_not_mutate_original(unsorted_result):
     original_first = unsorted_result.entries[0]["key"]
     sort_by_key(unsorted_result)
     assert unsorted_result.entries[0]["key"] == original_first
+
+
+def test_sort_entries_invalid_by_raises(unsorted_result):
+    """sort_entries should raise ValueError for an unrecognised 'by' value."""
+    with pytest.raises(ValueError, match="unknown sort field"):
+        sort_entries(unsorted_result, by="invalid_field")
