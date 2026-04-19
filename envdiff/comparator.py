@@ -1,64 +1,60 @@
 """Core comparison logic for envdiff."""
+from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, Set, Tuple
 
 
 @dataclass
 class DiffResult:
-    """Holds the result of comparing two .env files."""
-    base_file: str
-    compare_file: str
-    missing_in_compare: List[str] = field(default_factory=list)
-    missing_in_base: List[str] = field(default_factory=list)
-    mismatched: Dict[str, tuple] = field(default_factory=dict)
+    missing_in_compare: Set[str] = field(default_factory=set)
+    missing_in_base: Set[str] = field(default_factory=set)
+    mismatched: Dict[str, Tuple[str, str]] = field(default_factory=dict)
 
     @property
     def has_differences(self) -> bool:
-        return bool(
-            self.missing_in_compare
-            or self.missing_in_base
-            or self.mismatched
-        )
+        return bool(self.missing_in_compare or self.missing_in_base or self.mismatched)
 
     def summary(self) -> str:
-        lines = [f"Comparing '{self.base_file}' vs '{self.compare_file}':"]
-        if not self.has_differences:
-            lines.append("  No differences found.")
-            return "\n".join(lines)
+        parts = []
         if self.missing_in_compare:
-            lines.append(f"  Missing in '{self.compare_file}':")
-            for key in sorted(self.missing_in_compare):
-                lines.append(f"    - {key}")
+            parts.append(f"{len(self.missing_in_compare)} missing in compare")
         if self.missing_in_base:
-            lines.append(f"  Missing in '{self.base_file}':")
-            for key in sorted(self.missing_in_base):
-                lines.append(f"    - {key}")
+            parts.append(f"{len(self.missing_in_base)} missing in base")
         if self.mismatched:
-            lines.append("  Mismatched values:")
-            for key in sorted(self.mismatched):
-                base_val, cmp_val = self.mismatched[key]
-                lines.append(f"    ~ {key}: '{base_val}' != '{cmp_val}'")
-        return "\n".join(lines)
+            parts.append(f"{len(self.mismatched)} mismatched")
+        return ", ".join(parts) if parts else "No differences"
+
+
+def has_differences(result: DiffResult) -> bool:
+    """Return True when the result contains any differences."""
+    return result.has_differences
+
+
+def summary(result: DiffResult) -> str:
+    """Return a short summary string for *result*."""
+    return result.summary()
 
 
 def compare_envs(
-    base: Dict[str, Optional[str]],
-    compare: Dict[str, Optional[str]],
-    base_file: str = "base",
-    compare_file: str = "compare",
+    base: Dict[str, str],
+    compare: Dict[str, str],
     check_values: bool = True,
 ) -> DiffResult:
-    """Compare two parsed env dicts and return a DiffResult."""
-    result = DiffResult(base_file=base_file, compare_file=compare_file)
-    base_keys = set(base.keys())
-    compare_keys = set(compare.keys())
+    """Compare two env dictionaries and return a DiffResult."""
+    base_keys = set(base)
+    compare_keys = set(compare)
 
-    result.missing_in_compare = list(base_keys - compare_keys)
-    result.missing_in_base = list(compare_keys - base_keys)
+    missing_in_compare = base_keys - compare_keys
+    missing_in_base = compare_keys - base_keys
+    mismatched: Dict[str, Tuple[str, str]] = {}
 
     if check_values:
         for key in base_keys & compare_keys:
             if base[key] != compare[key]:
-                result.mismatched[key] = (base[key], compare[key])
+                mismatched[key] = (base[key], compare[key])
 
-    return result
+    return DiffResult(
+        missing_in_compare=missing_in_compare,
+        missing_in_base=missing_in_base,
+        mismatched=mismatched,
+    )
