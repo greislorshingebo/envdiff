@@ -24,6 +24,14 @@ class DiffResult:
             parts.append(f"{len(self.mismatched)} mismatched")
         return ", ".join(parts) if parts else "No differences"
 
+    def all_differing_keys(self) -> Set[str]:
+        """Return the union of all keys that differ in any way.
+
+        This includes keys missing from either side as well as keys whose
+        values do not match.
+        """
+        return self.missing_in_compare | self.missing_in_base | set(self.mismatched)
+
 
 def has_differences(result: DiffResult) -> bool:
     """Return True when the result contains any differences."""
