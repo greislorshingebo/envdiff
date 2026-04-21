@@ -79,3 +79,18 @@ def test_empty_result():
     grouped = group_by_prefix(result)
     assert grouped.labels() == []
     assert grouped.total() == 0
+
+
+def test_group_by_custom_all_same_label(mixed_result):
+    """All entries mapped to the same label should produce a single group."""
+    grouped = group_by_custom(mixed_result, lambda k: "all")
+    assert grouped.labels() == ["all"]
+    assert grouped.total() == len(mixed_result.entries)
+    assert len(grouped.get("all")) == len(mixed_result.entries)
+
+
+def test_group_by_status_missing_counts(mixed_result):
+    """Verify counts for missing_in_compare and missing_in_base statuses."""
+    grouped = group_by_status(mixed_result)
+    assert len(grouped.get("missing_in_compare")) == 1
+    assert len(grouped.get("missing_in_base")) == 1
