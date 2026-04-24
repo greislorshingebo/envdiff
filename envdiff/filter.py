@@ -3,6 +3,8 @@
 from typing import List, Optional
 from envdiff.comparator import DiffResult
 
+VALID_STATUSES = frozenset(["missing_in_compare", "missing_in_base", "mismatch", "ok"])
+
 
 def filter_by_status(
     result: DiffResult,
@@ -11,7 +13,16 @@ def filter_by_status(
     """Return a new DiffResult containing only entries matching given statuses.
 
     Valid statuses: 'missing_in_compare', 'missing_in_base', 'mismatch', 'ok'
+
+    Raises:
+        ValueError: If any provided status is not a recognised status value.
     """
+    invalid = [s for s in statuses if s not in VALID_STATUSES]
+    if invalid:
+        raise ValueError(
+            f"Invalid status value(s): {invalid}. "
+            f"Valid statuses are: {sorted(VALID_STATUSES)}"
+        )
     filtered = [e for e in result.entries if e["status"] in statuses]
     return DiffResult(entries=filtered)
 
